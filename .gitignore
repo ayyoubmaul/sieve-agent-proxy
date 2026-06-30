@@ -1,0 +1,15 @@
+# secrets / local config
+.env
+
+# build artifacts
+/sieve
+/bench/bench
+/dist/
+*.exe
+
+# caches / local state
+.fastembed_cache/
+.claude/
+
+# backups
+_backup/

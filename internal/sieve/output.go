@@ -214,8 +214,8 @@ func injectOpenAISystem(body map[string]json.RawMessage, directive string) {
 	body["messages"], _ = json.Marshal(append(msgs, m))
 }
 
-// outputSummary renders the active output-policy levers for the startup banner.
-func (cfg *Config) outputSummary() string {
+// OutputSummary renders the active output-policy levers for the startup banner.
+func (cfg *Config) OutputSummary() string {
 	if !cfg.Output.Enabled {
 		return "❌ off"
 	}

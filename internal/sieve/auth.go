@@ -51,7 +51,7 @@ type Auth struct {
 
 // authPath resolves the credentials file location.
 // Override with AUTH_FILE; defaults to ~/.sieve/auth.json.
-func authPath() string {
+func AuthPath() string {
 	if p := os.Getenv("AUTH_FILE"); p != "" {
 		return p
 	}
@@ -64,7 +64,7 @@ func authPath() string {
 
 // LoadAuth reads the credentials file (or starts empty if absent).
 func LoadAuth() *Auth {
-	a := &Auth{path: authPath(), data: authStore{Providers: map[string]*Credential{}}}
+	a := &Auth{path: AuthPath(), data: authStore{Providers: map[string]*Credential{}}}
 	b, err := os.ReadFile(a.path)
 	if err != nil {
 		return a // no file yet — empty store

@@ -213,9 +213,9 @@ func loadUpstreams(c *Config) (map[string]Upstream, string) {
 	return ups, def
 }
 
-// upstreamsSummary renders the configured routing profiles for the banner,
+// UpstreamsSummary renders the configured routing profiles for the banner,
 // e.g. `anthropic→api.anthropic.com, gateway→https://example.com/api[auth:custom]`.
-func (c *Config) upstreamsSummary() string {
+func (c *Config) UpstreamsSummary() string {
 	names := make([]string, 0, len(c.Upstreams))
 	for name := range c.Upstreams {
 		names = append(names, name)
@@ -234,8 +234,8 @@ func (c *Config) upstreamsSummary() string {
 	return strings.Join(parts, ", ")
 }
 
-// toolCompactionSummary renders the tool-compaction settings for the banner.
-func (c *Config) toolCompactionSummary() string {
+// ToolCompactionSummary renders the tool-compaction settings for the banner.
+func (c *Config) ToolCompactionSummary() string {
 	if !c.ToolCompaction.Enabled {
 		return "❌ off"
 	}
@@ -251,8 +251,8 @@ func (c *Config) toolCompactionSummary() string {
 		o.MinBytes, o.MaxStringRunes, o.MaxArrayItems, o.MaxLines, extra)
 }
 
-// alignSummary renders the active PromptAlign levers for the startup banner.
-func (c *Config) alignSummary() string {
+// AlignSummary renders the active PromptAlign levers for the startup banner.
+func (c *Config) AlignSummary() string {
 	if !c.PromptAlign.Enabled {
 		return "❌ off"
 	}

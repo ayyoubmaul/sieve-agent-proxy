@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ayyoubmaul/sieve-agent-proxy/internal/sieve"
+	"sieve/internal/sieve"
 )
 
 func main() {
@@ -26,10 +26,10 @@ func main() {
 			cmdAuth(os.Args[2:])
 			return
 		case "wrap":
-			cmdWrap(os.Args[2:])
+			sieve.CmdWrap(os.Args[2:])
 			return
 		case "mcp":
-			cmdMCP(os.Args[2:])
+			sieve.CmdMCP(os.Args[2:])
 			return
 		case "serve":
 			// fall through to server
@@ -81,7 +81,7 @@ func cmdLogout(args []string) {
 		fmt.Println("error: -p <provider> is required")
 		os.Exit(1)
 	}
-	store := LoadAuth()
+	store := sieve.LoadAuth()
 	if !store.Has(*provider) {
 		fmt.Printf("no stored credential for %q\n", *provider)
 		return
@@ -97,7 +97,7 @@ func cmdAuth(args []string) {
 		fmt.Println("usage: auth list")
 		return
 	}
-	store := LoadAuth()
+	store := sieve.LoadAuth()
 	creds := store.List()
 	if len(creds) == 0 {
 		fmt.Println("No stored credentials. Use `login -p <provider>` to add one.")
@@ -108,7 +108,7 @@ func cmdAuth(args []string) {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
-	fmt.Printf("Stored credentials (%s):\n", authPath())
+	fmt.Printf("Stored credentials (%s):\n", sieve.AuthPath())
 	for _, id := range ids {
 		fmt.Printf("  • %-20s %s\n", id, creds[id])
 	}
@@ -125,12 +125,12 @@ func runServer() {
 	fmt.Printf("  Listening  → http://localhost:%s\n", cfg.Port)
 	fmt.Printf("  Target     → %s  (default: %q)\n", cfg.Upstreams[cfg.DefaultUpstream].Target, cfg.DefaultUpstream)
 	if len(cfg.Upstreams) > 1 {
-		fmt.Printf("  Upstreams  → %s  (select via X-Sieve-Upstream header)\n", cfg.upstreamsSummary())
+		fmt.Printf("  Upstreams  → %s  (select via X-Sieve-Upstream header)\n", cfg.UpstreamsSummary())
 	}
 	fmt.Printf("  Compress   → %s\n", onOff(cfg.Compression.Enabled))
-	fmt.Printf("  Tool ✂️    → %s\n", cfg.toolCompactionSummary())
-	fmt.Printf("  Output     → %s\n", cfg.outputSummary())
-	fmt.Printf("  Align      → %s\n", cfg.alignSummary())
+	fmt.Printf("  Tool ✂️    → %s\n", cfg.ToolCompactionSummary())
+	fmt.Printf("  Output     → %s\n", cfg.OutputSummary())
+	fmt.Printf("  Align      → %s\n", cfg.AlignSummary())
 	fmt.Printf("  Token $    → %s\n", cacheLine(cfg.TokenCache.Enabled,
 		fmt.Sprintf("TTL %ds, max %d", cfg.TokenCache.TTL, cfg.TokenCache.MaxEntries)))
 	fmt.Printf("  Semantic $ → %s\n", cacheLine(cfg.SemanticCache.Enabled,

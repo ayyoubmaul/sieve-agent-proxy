@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sieve - LLM Compress Proxy</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #08080d;
+      --surface:  #111118;
+      --raised:   #18181f;
+      --border:   #25252f;
+      --text:     #e2e2f0;
+      --muted:    #6b6b80;
+      --indigo:   #6366f1;
+      --indigo2:  #818cf8;
+      --emerald:  #10b981;
+      --amber:    #f59e0b;
+      --rose:     #f43f5e;
+      --mono:     'JetBrains Mono', 'Fira Code', monospace;
+      --sans:     'Inter', system-ui, sans-serif;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 28px 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      width: 36px; height: 36px;
+      background: var(--indigo);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── Status pill ─────────────────────────────────── */
+    .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      animation: pulse 2s infinite;
+    }
+    .dot.offline { background: var(--rose); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    #uptime { color: var(--muted); }
+
+    /* ── Signal bars (signature element) ─────────────── */
+    .signal-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 20px;
+    }
+
+    .signal-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--indigo);
+      opacity: 0.3;
+      transition: height 0.4s ease, opacity 0.4s ease;
+    }
+    .signal-bar.active { opacity: 1; }
+
+    /* ── Stat grid ───────────────────────────────────── */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 720px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--indigo2);
+    }
+
+    .stat-value.green  { color: var(--emerald); }
+    .stat-value.amber  { color: var(--amber); }
+    .stat-value.purple { color: var(--indigo2); }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Cache cards ─────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .cache-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .cache-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .cache-icon { font-size: 16px; }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .row-label { color: var(--muted); }
+    .row-val   { font-family: var(--mono); font-weight: 600; }
+    .row-val.green  { color: var(--emerald); }
+
+    /* ── Progress bar ────────────────────────────────── */
+    .bar-wrap {
+      height: 4px;
+      background: var(--raised);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--indigo), var(--emerald));
+      transition: width 0.5s cubic-bezier(.25,.8,.25,1);
+      width: 0%;
+    }
+
+    /* ── Actions ─────────────────────────────────────── */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    button:hover { border-color: var(--indigo); color: var(--indigo2); }
+    button.danger:hover { border-color: var(--rose); color: var(--rose); }
+
+    /* ── Footer ──────────────────────────────────────── */
+    footer {
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── Compression badge ───────────────────────────── */
+    .compress-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: color-mix(in srgb, var(--amber) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--amber);
+      font-family: var(--mono);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">⚡</div>
+    <div>
+      <h1>Sieve - LLM Compress Proxy</h1>
+      <p id="target-url">loading…</p>
+    </div>
+    <div class="status">
+      <div class="signal-row" id="signal">
+        <div class="signal-bar" style="height:5px"  id="sb0"></div>
+        <div class="signal-bar" style="height:9px"  id="sb1"></div>
+        <div class="signal-bar" style="height:13px" id="sb2"></div>
+        <div class="signal-bar" style="height:17px" id="sb3"></div>
+        <div class="signal-bar" style="height:20px" id="sb4"></div>
+      </div>
+      <div class="dot" id="dot"></div>
+      <span id="status-text">—</span>
+      <span id="uptime"></span>
+    </div>
+  </header>
+
+  <div class="grid-4">
+    <div class="stat-card">
+      <div class="stat-label">Requests</div>
+      <div class="stat-value" id="s-req">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cache Hits</div>
+      <div class="stat-value green" id="s-hits">—</div>
+      <div class="stat-sub" id="s-hitpct">—</div>
+    </div>
+    <div class="stat-card" title="Cumulative across all requests. An agent resends the whole conversation each turn, so a compacted result's saving is counted every turn it reappears — this is total input tokens NOT forwarded upstream, not unique bytes.">
+      <div class="stat-label">Tokens Saved · cumulative</div>
+      <div class="stat-value amber" id="s-tokens">—</div>
+      <div class="stat-sub" id="s-toolsaved">~4 chars / token</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Forwarded</div>
+      <div class="stat-value purple" id="s-fwd">—</div>
+      <div class="stat-sub" id="s-errors">0 errors</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="stat-card">
+      <div class="stat-label">Output Tokens</div>
+      <div class="stat-value amber" id="s-outtok">—</div>
+      <div class="stat-sub">measured · generated (bills highest)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Input Tokens</div>
+      <div class="stat-value" id="s-intok">—</div>
+      <div class="stat-sub">measured · prompt</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cached In Tokens</div>
+      <div class="stat-value green" id="s-cached">—</div>
+      <div class="stat-sub" id="s-cachedpct">provider prompt cache</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">PromptAlign Hits</div>
+      <div class="stat-value purple" id="s-align">—</div>
+      <div class="stat-sub" id="s-breakpoints">— breakpoints injected</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button onclick="refresh()">↻ Refresh</button>
+    <button class="danger" onclick="clearCaches()">🗑 Clear Caches</button>
+  </div>
+
+  <div class="grid-2">
+
+    <div class="cache-card">
+      <div class="cache-title">
+        <span class="cache-icon">🔑</span>
+        Token Cache &nbsp;<span style="font-size:11px;color:var(--muted);font-weight:400">SHA-256 exact match</span>
+      </div>
+      <div class="row"><span class="row-label">Entries</span> <span class="row-val" id="tc-size">—</span></div>
+      <div class="row"><span class="row-label">Hits</span>    <span class="row-val green" id="tc-hits">—</span></div>
+      <div class="row"><span class="row-label">Misses</span>  <span class="row-val" id="tc-miss">—</span></div>
+      <div class="row"><span class="row-label">Hit rate</span><span class="row-val green" id="tc-rate">—</span></div>
+      <div class="bar-wrap"><div class="bar-fill" id="tc-bar"></div></div>
+    </div>
+
+    <div class="cache-card">
+      <div class="cache-title">
+        <span class="cache-icon">🧠</span>
+        Semantic Cache &nbsp;<span style="font-size:11px;color:var(--muted);font-weight:400">TF-IDF cosine</span>
+      </div>
+      <div class="row"><span class="row-label">Entries</span>   <span class="row-val" id="sc-size">—</span></div>
+      <div class="row"><span class="row-label">Hits</span>      <span class="row-val green" id="sc-hits">—</span></div>
+      <div class="row"><span class="row-label">Misses</span>    <span class="row-val" id="sc-miss">—</span></div>
+      <div class="row"><span class="row-label">Hit rate</span>  <span class="row-val green" id="sc-rate">—</span></div>
+      <div class="bar-wrap"><div class="bar-fill" id="sc-bar"></div></div>
+    </div>
+
+  </div>
+
+  <div class="cache-card" style="margin-bottom:20px">
+    <div class="cache-title">
+      <span class="cache-icon">📡</span>
+      Request Sources &nbsp;<span style="font-size:11px;color:var(--muted);font-weight:400">agent → provider</span>
+    </div>
+    <div id="sources-list">
+      <div class="row"><span class="row-label">No traffic yet</span><span class="row-val">—</span></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>sieve - llm-compress-proxy v1.0.0</span>
+    <span>auto-refresh every 4 s</span>
+  </footer>
+
+  <script>
+    const BASE = window.location.origin.replace('/dashboard', '').replace('/dashboard/', '');
+    let prevReqs = 0;
+    let online   = false;
+
+    async function refresh() {
+      try {
+        const r    = await fetch(`${BASE}/stats`);
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+
+        setOnline(true);
+        const g = data.global;
+
+        // ── Uptime ────────────────────────────────────
+        const s = Math.floor(g.uptime / 1000);
+        const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+        setText('uptime', `${h}h${m}m${sec}s`);
+
+        // ── Global metrics ────────────────────────────
+        setText('s-req',    fmt(g.requests));
+        const totalHits = g.tokenCacheHits + g.semanticCacheHits;
+        setText('s-hits',   fmt(totalHits));
+        const pct = g.requests > 0 ? ((totalHits / g.requests) * 100).toFixed(0) : 0;
+        setText('s-hitpct', `${pct}% of all requests`);
+        setText('s-tokens', fmt(Math.floor(g.totalCharsSaved / 4)));
+        const toolTok = Math.floor((g.toolCharsSaved || 0) / 4);
+        const savedTok = Math.floor(g.totalCharsSaved / 4);
+        const perReq = g.requests > 0 ? Math.floor(savedTok / g.requests) : 0;
+        const toolPart = toolTok > 0 ? `incl. ~${fmt(toolTok)} from tools · ` : '';
+        setText('s-toolsaved', `${toolPart}~${fmt(perReq)}/request avg`);
+        setText('s-fwd',    fmt(g.forwarded));
+        setText('s-errors', `${g.errors} error${g.errors !== 1 ? 's' : ''}`);
+        setText('s-outtok', fmt(g.outputTokens || 0));
+        setText('s-intok',  fmt(g.inputTokens || 0));
+        setText('s-cached', fmt(g.cachedTokens || 0));
+        // Use the server-computed ratio: cached/(input+cached). Providers report
+        // cached tokens separately from inputTokens, so cached/input overshoots 100%.
+        const cpct = (g.cacheHitRatio || 0).toFixed(0);
+        setText('s-cachedpct', `${cpct}% of prompt from cache`);
+
+        // ── PromptAlign ───────────────────────────────
+        setText('s-align', fmt(g.promptAlignApplied || 0));
+        const bp = g.breakpointsInjected || 0;
+        setText('s-breakpoints', `${fmt(bp)} breakpoint${bp !== 1 ? 's' : ''} injected`);
+
+        // ── Signal animation ──────────────────────────
+        animateSignal(g.requests !== prevReqs);
+        prevReqs = g.requests;
+
+        // ── Token cache ───────────────────────────────
+        const tc = data.tokenCache;
+        setText('tc-size', tc.size);
+        setText('tc-hits', tc.hits);
+        setText('tc-miss', tc.misses);
+        setText('tc-rate', tc.hitRate);
+        setBar('tc-bar', parseFloat(tc.hitRate) || 0);
+
+        // ── Semantic cache ────────────────────────────
+        const sc = data.semanticCache;
+        setText('sc-size', sc.size);
+        setText('sc-hits', sc.hits);
+        setText('sc-miss', sc.misses);
+        setText('sc-rate', sc.hitRate);
+        setBar('sc-bar', parseFloat(sc.hitRate) || 0);
+
+        // ── Request sources ───────────────────────────
+        renderSources(data.sources || [], g.requests);
+
+      } catch {
+        setOnline(false);
+      }
+    }
+
+    function renderSources(sources, totalReq) {
+      const el = document.getElementById('sources-list');
+      if (!sources.length) {
+        el.innerHTML = '<div class="row"><span class="row-label">No traffic yet</span><span class="row-val">—</span></div>';
+        return;
+      }
+      el.innerHTML = sources.map(s => {
+        const pct = totalReq > 0 ? Math.round((s.requests / totalReq) * 100) : 0;
+        return `<div class="row">
+          <span class="row-label">
+            <span style="color:var(--text);font-weight:500">${esc(s.agent)}</span>
+            <span style="color:var(--muted)"> → ${esc(s.provider)}</span>
+          </span>
+          <span class="row-val">${fmt(s.requests)} <span style="color:var(--muted);font-weight:400">· ${pct}%</span></span>
+        </div>`;
+      }).join('');
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function clearCaches() {
+      if (!confirm('Clear all caches? Existing hits will be lost.')) return;
+      await fetch(`${BASE}/cache/clear`, { method: 'POST' });
+      await refresh();
+    }
+
+    function setOnline(val) {
+      online = val;
+      document.getElementById('dot').className = 'dot' + (val ? '' : ' offline');
+      document.getElementById('status-text').textContent = val ? 'Online' : 'Offline';
+    }
+
+    function setText(id, val) {
+      document.getElementById(id).textContent = val;
+    }
+
+    function setBar(id, pct) {
+      document.getElementById(id).style.width = Math.min(100, pct) + '%';
+    }
+
+    function fmt(n) {
+      return n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + 'M'
+           : n >= 1_000     ? (n / 1_000).toFixed(1) + 'k'
+           : String(n);
+    }
+
+    // Animate signal bars on traffic
+    const bars  = [0,1,2,3,4].map(i => document.getElementById(`sb${i}`));
+    let barTimer = null;
+
+    function animateSignal(hasTraffic) {
+      if (!hasTraffic) { bars.forEach(b => b.classList.remove('active')); return; }
+      let i = 0;
+      clearInterval(barTimer);
+      barTimer = setInterval(() => {
+        bars.forEach((b, j) => b.classList.toggle('active', j <= i));
+        i = (i + 1) % (bars.length + 2);
+      }, 120);
+    }
+
+    refresh();
+    setInterval(refresh, 4000);
+  </script>
+</body>
+</html>

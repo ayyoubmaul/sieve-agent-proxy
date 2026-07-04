@@ -8,6 +8,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/ayyoubmaul/sieve-agent-proxy/internal/sieve"
 )
 
 func main() {
@@ -64,8 +66,8 @@ func cmdLogin(args []string) {
 		fmt.Println("error: -p <provider> is required")
 		os.Exit(1)
 	}
-	store := LoadAuth()
-	if err := RunLogin(store, *provider, *key, *header); err != nil {
+	store := sieve.LoadAuth()
+	if err := sieve.RunLogin(store, *provider, *key, *header); err != nil {
 		log.Fatalf("login failed: %v", err)
 	}
 }
@@ -113,8 +115,8 @@ func cmdAuth(args []string) {
 }
 
 func runServer() {
-	cfg := LoadConfig()
-	srv := NewServer(cfg)
+	cfg := sieve.LoadConfig()
+	srv := sieve.NewServer(cfg)
 
 	line := strings.Repeat("─", 56)
 	fmt.Printf("\n%s\n", line)

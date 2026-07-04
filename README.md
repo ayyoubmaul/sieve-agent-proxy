@@ -9,7 +9,7 @@
   [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
   
-  [Features](#-features) • [Quick Start](#-quick-start) • [How It Works](#-how-it-works) • [Docs](USAGE.md)
+  [Features](#-features) • [Quick Start](#-quick-start) • [How It Works](#-how-it-works) • [Docs](docs/USAGE.md) • [Contributing](CONTRIBUTING.md)
 </div>
 
 ---
@@ -30,7 +30,7 @@ A **single-binary Go proxy** that sits between your LLM client (Claude Code, Cur
 | **📡 Streaming** | Zero latency | Full SSE support (Anthropic + OpenAI), cached replay included. |
 | **🔀 Multi-upstream routing** | Single proxy, many backends | Route requests per-header to different APIs without restart. |
 
-> 📖 **[USAGE.md](USAGE.md)** walks you through every feature with live examples.
+> 📖 **[USAGE.md](docs/USAGE.md)** walks you through every feature with live examples.
 
 ---
 
@@ -39,12 +39,11 @@ A **single-binary Go proxy** that sits between your LLM client (Claude Code, Cur
 ### Install
 
 ```bash
-# Build from source
+# Clone and build
 git clone https://github.com/ayyoubmaul/sieve-agent-proxy
 cd sieve-agent-proxy
-go build -o sieve
-
-# Or download pre-built binary (coming soon)
+make build              # or: go build -o bin/sieve ./cmd/sieve
+./bin/sieve --help      # verify installation
 ```
 
 ### Run
@@ -61,7 +60,7 @@ claude
 
 All compression and caching are **on by default** — zero config needed for the basic win. Optional features (semantic caching, output reduction, multi-upstream) are controlled by env vars in `.env`.
 
-👉 **[Full setup guide →](USAGE.md)**
+👉 **[Full setup guide →](docs/USAGE.md)** | **[Development →](CONTRIBUTING.md)**
 
 ---
 

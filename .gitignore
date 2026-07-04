@@ -1,15 +1,36 @@
-# secrets / local config
-.env
-
-# build artifacts
-/sieve
-/bench/bench
-/dist/
+# Build artifacts
+bin/
+dist/
 *.exe
+*.dll
+*.so
+*.dylib
 
-# caches / local state
+# Test coverage
+coverage.out
+coverage.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment & secrets
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.log
+/vendor
+
+# Go caches
+.cache
+
+# Project-specific
 .fastembed_cache/
 .claude/
-
-# backups
 _backup/

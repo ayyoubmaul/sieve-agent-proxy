@@ -1,0 +1,59 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#f8f9fa" stroke="#e9ecef" stroke-width="2"/>
+
+  <!-- Sieve bowl -->
+  <path d="M 50 80 Q 50 70 60 65 L 140 65 Q 150 70 150 80" fill="none" stroke="#0f7b9f" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Sieve mesh (dots representing holes) -->
+  <g fill="#0f7b9f" opacity="0.3">
+    <circle cx="65" cy="85" r="3"/>
+    <circle cx="85" cy="88" r="3"/>
+    <circle cx="105" cy="85" r="3"/>
+    <circle cx="125" cy="88" r="3"/>
+    <circle cx="145" cy="85" r="3"/>
+    <circle cx="72" cy="105" r="3"/>
+    <circle cx="95" cy="108" r="3"/>
+    <circle cx="120" cy="105" r="3"/>
+    <circle cx="138" cy="108" r="3"/>
+    <circle cx="60" cy="125" r="3"/>
+    <circle cx="85" cy="128" r="3"/>
+    <circle cx="110" cy="125" r="3"/>
+    <circle cx="132" cy="128" r="3"/>
+    <circle cx="150" cy="125" r="3"/>
+  </g>
+
+  <!-- Tokens/streams passing through -->
+  <g stroke="#ff6b6b" stroke-width="2" fill="none" stroke-linecap="round">
+    <!-- Token 1 -->
+    <path d="M 50 50 Q 60 70 65 95" opacity="0.8"/>
+    <circle cx="65" cy="95" r="2" fill="#ff6b6b" opacity="0.8"/>
+
+    <!-- Token 2 -->
+    <path d="M 100 45 Q 100 68 105 95" opacity="0.9"/>
+    <circle cx="105" cy="95" r="2" fill="#ff6b6b" opacity="0.9"/>
+
+    <!-- Token 3 -->
+    <path d="M 150 50 Q 135 75 125 95" opacity="0.8"/>
+    <circle cx="125" cy="95" r="2" fill="#ff6b6b" opacity="0.8"/>
+  </g>
+
+  <!-- Output tokens (compressed) -->
+  <g stroke="#51cf66" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <!-- Token A -->
+    <path d="M 65 130 L 65 155" opacity="0.9"/>
+    <circle cx="65" cy="155" r="2.5" fill="#51cf66" opacity="0.9"/>
+
+    <!-- Token B -->
+    <path d="M 105 130 L 105 155" opacity="0.9"/>
+    <circle cx="105" cy="155" r="2.5" fill="#51cf66" opacity="0.9"/>
+
+    <!-- Token C -->
+    <path d="M 140 130 L 140 155" opacity="0.9"/>
+    <circle cx="140" cy="155" r="2.5" fill="#51cf66" opacity="0.9"/>
+  </g>
+
+  <!-- Compression indicator -->
+  <text x="100" y="45" font-family="monospace" font-size="12" font-weight="bold" fill="#0f7b9f" text-anchor="middle" opacity="0.6">INPUT</text>
+  <text x="100" y="175" font-family="monospace" font-size="12" font-weight="bold" fill="#51cf66" text-anchor="middle" opacity="0.8">COMPRESSED</text>
+</svg>

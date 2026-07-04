@@ -1,26 +1,104 @@
-# ⚡ LLM Compress Proxy (Go)
-
-A single-binary proxy that sits between **OpenCode** (or any LLM client) and any
-AI API, cutting token usage and cost through compression and two-level caching.
-
-**Zero external dependencies** — pure Go standard library. Builds to one static
-binary you can drop anywhere.
-
-- **Tool-result compaction** — content-aware shrinking of the bulkiest thing a coding agent resends every turn: bloated JSON (elide long values, cap big arrays), repeated log lines (dedup by shape), SQL/table dumps (keep first/last rows). Deterministic, so it preserves the upstream prompt-cache prefix
-- **Retrieval / context rolling** — full originals saved to a content-addressed store; the compacted form carries a `sieve_fetch(ref)` marker so the agent can pull an original back on demand (via the bundled MCP server)
-- **Token compression** — whitespace normalisation, deduplication, old-turn summarisation
-- **L1 token cache** — SHA-256 exact-match, TTL + LRU eviction, O(1)
-- **L2 semantic cache** — TF-IDF cosine similarity for near-duplicate queries, O(n)
-- **Streaming** — full SSE support for both Anthropic and OpenAI formats, including cached replay
-
-> 📖 New here? See **[USAGE.md](USAGE.md)** for a step-by-step how-to covering
-> every feature.
+<div align="center">
+  <img src="logo.svg" alt="Sieve Logo" width="120" height="120">
+  
+  # Sieve
+  
+  **Token-saving LLM proxy** that compresses, caches, and retrieves without losing context
+  
+  [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)](https://go.dev)
+  [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
+  
+  [Features](#-features) • [Quick Start](#-quick-start) • [How It Works](#-how-it-works) • [Docs](USAGE.md)
+</div>
 
 ---
 
-## Why Go (and not Node or Rust)?
+A **single-binary Go proxy** that sits between your LLM client (Claude Code, Cursor, etc.) and any AI API. Cuts token costs through intelligent **compression**, **two-level caching**, and **content-aware tool-result compaction**.
 
-This proxy lives in the hot path of every request, so the language matters:
+**Zero external dependencies** — pure Go stdlib. Builds to a static binary you can drop anywhere.
+
+## 🎯 Features
+
+| Feature | Impact | Details |
+|---------|--------|---------|
+| **🔨 Tool-result compaction** | 40-60% ↓ input tokens | Smart JSON/log/SQL shrinking—keep structure, elide bulky values. Deterministic, preserves cache prefix. |
+| **📦 Retrieval / context rolling** | Full originals on demand | Store originals content-addressed; compacted form marks where to fetch via `sieve_fetch()` MCP tool. |
+| **🗜️ Token compression** | 15-30% ↓ input tokens | Whitespace normalization, deduplication, old-turn summarization—code-safe. |
+| **⚡ L1 exact-match cache** | O(1) hits | SHA-256 matching, TTL + LRU, skips API call entirely. |
+| **🧠 L2 semantic cache** | 5-15% hit rate | TF-IDF similarity, catches reworded duplicates—fast, dependency-free. |
+| **📡 Streaming** | Zero latency | Full SSE support (Anthropic + OpenAI), cached replay included. |
+| **🔀 Multi-upstream routing** | Single proxy, many backends | Route requests per-header to different APIs without restart. |
+
+> 📖 **[USAGE.md](USAGE.md)** walks you through every feature with live examples.
+
+---
+
+## 🚀 Quick Start
+
+### Install
+
+```bash
+# Build from source
+git clone https://github.com/ayyoubmaul/sieve-agent-proxy
+cd sieve-agent-proxy
+go build -o sieve
+
+# Or download pre-built binary (coming soon)
+```
+
+### Run
+
+```bash
+# Start the proxy (listens on :4141)
+./sieve
+
+# Point Claude Code at it
+ANTHROPIC_BASE_URL=http://localhost:4141 \
+ANTHROPIC_API_KEY=sk-ant-xxx \
+claude
+```
+
+All compression and caching are **on by default** — zero config needed for the basic win. Optional features (semantic caching, output reduction, multi-upstream) are controlled by env vars in `.env`.
+
+👉 **[Full setup guide →](USAGE.md)**
+
+---
+
+## 💡 How It Works
+
+```
+  ┌─ Claude Code ──┐
+  │ (or any client)│
+         │
+         ▼
+  ┌──────────────┐
+  │ Sieve Proxy  │
+  │              │
+  │ ├─ Compress  │
+  │ ├─ Cache L1  │
+  │ ├─ Cache L2  │
+  │ └─ Compact   │
+  └──────────────┘
+         │
+         ▼
+  ┌──────────────┐
+  │ Claude API   │
+  │ (Anthropic)  │
+  └──────────────┘
+
+Sieve sits in the hot path:
+• Input: Whitelisted compression before sending to API
+• Output: Tool-result compaction (shrink bulky JSON/logs/SQL)
+• Caching: L1 (exact) + L2 (semantic) — both in-memory, O(1) hits
+• Retrieval: Full originals saved; agent pulls them back via sieve_fetch()
+```
+
+---
+
+## 📊 Why Go (and not Node or Rust)?
+
+This proxy sits in the hot path — language choice matters:
 
 |                                                 | Node (prototype)               | **Go (this)**                    | Rust                       |
 | ----------------------------------------------- | ------------------------------ | -------------------------------- | -------------------------- |

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.svg" alt="Sieve Logo" width="120" height="120">
+  <img src="sieve-logo.png" alt="Sieve Logo" width="200">
   
   # Sieve
   

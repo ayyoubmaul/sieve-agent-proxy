@@ -362,7 +362,8 @@ func (s *Server) handleLLM(w http.ResponseWriter, r *http.Request) {
 	outBody, _ := json.Marshal(body)
 
 	// ── Forward ──────────────────────────────────────────────────────────
-	targetURL := s.cfg.TargetURL + r.URL.Path
+	up := s.resolveUpstream(r)
+	targetURL := up.Target + r.URL.Path
 	log.Printf("  📡 → %s", targetURL)
 
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(outBody))
@@ -371,7 +372,7 @@ func (s *Server) handleLLM(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	s.applyHeaders(req, r, isAnthropic)
+	s.applyHeaders(req, r, isAnthropic, up)
 
 	// Ensure the prompt-caching beta flag is present when PromptAlign injected
 	// breakpoints, so older Anthropic endpoints honor them (GA endpoints ignore
@@ -583,7 +584,7 @@ func (s *Server) replayStream(w http.ResponseWriter, cached []byte, isAnthropic 
 
 func (s *Server) handlePassthrough(w http.ResponseWriter, r *http.Request) {
 	s.incr(func(st *Stats) { st.Requests++ })
-	targetURL := s.cfg.TargetURL + r.URL.Path
+	targetURL := s.resolveUpstream(r).Target + r.URL.Path
 	if r.URL.RawQuery != "" {
 		targetURL += "?" + r.URL.RawQuery
 	}
@@ -619,7 +620,7 @@ func (s *Server) handlePassthrough(w http.ResponseWriter, r *http.Request) {
 
 // ── Header / utility helpers ─────────────────────────────────────────────
 
-func (s *Server) applyHeaders(req *http.Request, orig *http.Request, isAnthropic bool) {
+func (s *Server) applyHeaders(req *http.Request, orig *http.Request, isAnthropic bool, up Upstream) {
 	req.Header.Set("Content-Type", "application/json")
 
 	// Anthropic version header is always passed through / defaulted.
@@ -646,10 +647,10 @@ func (s *Server) applyHeaders(req *http.Request, orig *http.Request, isAnthropic
 	// 0. Override mode: the stored AUTH_PROVIDER credential wins over whatever
 	// the client sent. Lets a client point at sieve with a throwaway key while
 	// sieve injects the real upstream credential.
-	if s.cfg.AuthOverride && s.auth != nil && s.cfg.AuthProvider != "" {
+	if up.AuthOverride && s.auth != nil && up.AuthProvider != "" {
 		req.Header.Del("x-api-key")
 		req.Header.Del("Authorization")
-		if err := s.auth.Inject(req, s.cfg.AuthProvider); err != nil {
+		if err := s.auth.Inject(req, up.AuthProvider); err != nil {
 			log.Printf("  ⚠️  auth: %v (set AUTH_PROVIDER + run `login`)", err)
 		}
 		return
@@ -681,12 +682,29 @@ func (s *Server) applyHeaders(req *http.Request, orig *http.Request, isAnthropic
 		return
 	}
 
-	// 2. No client credential — inject the stored one for AUTH_PROVIDER (if any).
-	if s.auth != nil && s.cfg.AuthProvider != "" {
-		if err := s.auth.Inject(req, s.cfg.AuthProvider); err != nil {
+	// 2. No client credential — inject the stored one for the upstream (if any).
+	if s.auth != nil && up.AuthProvider != "" {
+		if err := s.auth.Inject(req, up.AuthProvider); err != nil {
 			log.Printf("  ⚠️  auth: %v (set AUTH_PROVIDER + run `login`)", err)
 		}
 	}
+}
+
+// resolveUpstream picks the routing profile for a request: the X-Sieve-Upstream
+// header if it names a configured profile, otherwise the default profile.
+func (s *Server) resolveUpstream(r *http.Request) Upstream {
+	if name := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Sieve-Upstream"))); name != "" {
+		if up, ok := s.cfg.Upstreams[name]; ok {
+			return up
+		}
+		log.Printf("  ⚠️  unknown upstream %q — using default", name)
+	}
+	if up, ok := s.cfg.Upstreams[s.cfg.DefaultUpstream]; ok {
+		return up
+	}
+	// Fallback for a Config built without loadUpstreams (e.g. tests): route to
+	// the top-level target/auth directly.
+	return Upstream{Target: s.cfg.TargetURL, AuthProvider: s.cfg.AuthProvider, AuthOverride: s.cfg.AuthOverride}
 }
 
 // mergeBeta returns the anthropic-beta header value with flag guaranteed

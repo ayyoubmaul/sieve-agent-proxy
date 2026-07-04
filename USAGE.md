@@ -413,6 +413,37 @@ config; the output reducers (step 5) and wrap (step 6) are opt-in.
 
 ---
 
+## 10.5. Multi-upstream routing (opt-in)
+
+Route a single proxy instance to different backends without restart:
+
+```bash
+# .env: define named profiles
+UPSTREAMS='
+anthropic {
+  target = "https://api.anthropic.com"
+}
+gateway {
+  target = "https://gateway.example.com/v1"
+  auth_provider = "custom"
+  auth_override = true
+}
+'
+DEFAULT_UPSTREAM=anthropic
+
+# Client selects upstream per-request
+curl -H "X-Sieve-Upstream: gateway" http://localhost:4141/v1/messages
+```
+
+**How it works:**
+- `DEFAULT_UPSTREAM` is used when no `X-Sieve-Upstream` header is set (or header value is unknown).
+- Header lookup is case-insensitive (e.g. `GATEWAY` → gateway profile).
+- Requests with no header and no default fall back to a synthesized "default" profile built from legacy `TARGET_URL`/`AUTH_PROVIDER` (backward compatibility).
+- Each profile bundles a target URL with auth settings (`auth_provider` and `auth_override`).
+- Full test coverage: see `upstream_test.go`.
+
+---
+
 ## 11. Full config reference
 
 All settings are env vars (read from `.env` or the environment).
@@ -422,8 +453,10 @@ All settings are env vars (read from `.env` or the environment).
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `4141` | Proxy port |
-| `TARGET_URL` | `https://api.anthropic.com` | Upstream API |
+| `TARGET_URL` | `https://api.anthropic.com` | Upstream API (ignored if `UPSTREAMS` is set) |
 | `AUTH_PROVIDER` | – | Stored credential to inject when a request has no auth header |
+| `UPSTREAMS` | – | Named routing profiles (YAML/TOML-like format; see section 10.5) |
+| `DEFAULT_UPSTREAM` | `default` | Fallback profile when X-Sieve-Upstream header is missing/unknown |
 
 ### Input compression
 

@@ -1,7 +1,7 @@
 // bench measures sieve efficiency vs direct gateway calls.
 // Usage:
 //
-//	go run ./bench -key sk-xxx -direct https://gateway.ai.dana.id -sieve http://localhost:4142 -model kimi-k2.6 -test all
+//	go run ./bench -key sk-xxx -direct https://gateway.example.com/v1 -sieve http://localhost:4142 -model claude-opus-4-1 -test all
 package main
 
 import (
@@ -352,10 +352,10 @@ func runRoundTripTest(direct, sieve, apiKey, model string) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 func main() {
-	key := flag.String("key", os.Getenv("DANA_API_KEY"), "API key")
-	direct := flag.String("direct", "https://gateway.ai.dana.id/v1", "Direct gateway URL (with path prefix, no trailing slash)")
+	key := flag.String("key", os.Getenv("API_KEY"), "API key")
+	direct := flag.String("direct", "https://gateway.example.com/v1", "Direct gateway URL (with path prefix, no trailing slash)")
 	sieve := flag.String("sieve", "http://localhost:4142", "Sieve URL")
-	model := flag.String("model", "kimi-k2.6", "Model name")
+	model := flag.String("model", "claude-opus-4-1", "Model name")
 	test := flag.String("test", "all", "Which test: cache | compression | roundtrip | all")
 	flag.Parse()
 

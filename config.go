@@ -4,12 +4,20 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 // Config holds all runtime settings, populated from environment variables
 // (optionally seeded from a .env file).
+// Upstream is one named routing profile: where to forward and how to authenticate.
+type Upstream struct {
+	Target       string // upstream base URL (host root); the client's full path is appended
+	AuthProvider string // stored credential to inject; empty = forward the client's own auth
+	AuthOverride bool   // inject the stored credential even when the client sent a key
+}
+
 type Config struct {
 	Port      string
 	TargetURL string
@@ -23,6 +31,14 @@ type Config struct {
 	// Lets a client (e.g. Claude Code, which insists on some key) point at sieve
 	// with a throwaway key while sieve injects the real upstream credential.
 	AuthOverride bool
+
+	// Upstreams are named routing profiles, each bundling a target URL with the
+	// auth to use. A client selects one per-request via the X-Sieve-Upstream
+	// header, so ONE running proxy can serve several backends (e.g. Anthropic +
+	// a gateway) without a restart. There is always a "default" profile built
+	// from TargetURL/AuthProvider/AuthOverride, so existing setups keep working.
+	Upstreams       map[string]Upstream
+	DefaultUpstream string
 
 	Compression struct {
 		Enabled             bool
@@ -163,6 +179,61 @@ func envFloat(key string, def float64) float64 {
 	return def
 }
 
+// loadUpstreams builds the named routing profiles. Each name listed in
+// UPSTREAMS reads UPSTREAM_<NAME>_TARGET / _AUTH / _OVERRIDE. A "default"
+// profile is always synthesised from the top-level TARGET_URL config so
+// existing single-target setups keep working and there is always a fallback.
+// DEFAULT_UPSTREAM picks which profile handles requests with no header.
+func loadUpstreams(c *Config) (map[string]Upstream, string) {
+	ups := map[string]Upstream{}
+	for _, raw := range strings.Split(env("UPSTREAMS", ""), ",") {
+		name := strings.ToLower(strings.TrimSpace(raw))
+		if name == "" {
+			continue
+		}
+		prefix := "UPSTREAM_" + strings.ToUpper(name) + "_"
+		target := strings.TrimRight(env(prefix+"TARGET", ""), "/")
+		if target == "" {
+			continue // a named upstream with no target is meaningless; skip it
+		}
+		ups[name] = Upstream{
+			Target:       target,
+			AuthProvider: env(prefix+"AUTH", ""),
+			AuthOverride: envBool(prefix+"OVERRIDE", false),
+		}
+	}
+	// Always provide "default" from the top-level config.
+	if _, ok := ups["default"]; !ok {
+		ups["default"] = Upstream{Target: c.TargetURL, AuthProvider: c.AuthProvider, AuthOverride: c.AuthOverride}
+	}
+	def := strings.ToLower(strings.TrimSpace(env("DEFAULT_UPSTREAM", "")))
+	if _, ok := ups[def]; !ok {
+		def = "default"
+	}
+	return ups, def
+}
+
+// upstreamsSummary renders the configured routing profiles for the banner,
+// e.g. `anthropic→api.anthropic.com, gateway→https://example.com/api[auth:custom]`.
+func (c *Config) upstreamsSummary() string {
+	names := make([]string, 0, len(c.Upstreams))
+	for name := range c.Upstreams {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	parts := make([]string, 0, len(names))
+	for _, name := range names {
+		up := c.Upstreams[name]
+		host := strings.TrimPrefix(strings.TrimPrefix(up.Target, "https://"), "http://")
+		s := name + "→" + host
+		if up.AuthProvider != "" {
+			s += "[auth:" + up.AuthProvider + "]"
+		}
+		parts = append(parts, s)
+	}
+	return strings.Join(parts, ", ")
+}
+
 // toolCompactionSummary renders the tool-compaction settings for the banner.
 func (c *Config) toolCompactionSummary() string {
 	if !c.ToolCompaction.Enabled {
@@ -212,6 +283,7 @@ func LoadConfig() *Config {
 
 	c.AuthProvider = env("AUTH_PROVIDER", "")
 	c.AuthOverride = envBool("AUTH_OVERRIDE", false)
+	c.Upstreams, c.DefaultUpstream = loadUpstreams(c)
 
 	c.Compression.Enabled = envBool("COMPRESSION", true)
 	c.Compression.SummarizeOldTurns = envBool("SUMMARIZE_OLD_TURNS", true)

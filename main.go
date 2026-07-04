@@ -121,7 +121,10 @@ func runServer() {
 	fmt.Println("  ⚡ LLM Compress Proxy (Go)")
 	fmt.Println(line)
 	fmt.Printf("  Listening  → http://localhost:%s\n", cfg.Port)
-	fmt.Printf("  Target     → %s\n", cfg.TargetURL)
+	fmt.Printf("  Target     → %s  (default: %q)\n", cfg.Upstreams[cfg.DefaultUpstream].Target, cfg.DefaultUpstream)
+	if len(cfg.Upstreams) > 1 {
+		fmt.Printf("  Upstreams  → %s  (select via X-Sieve-Upstream header)\n", cfg.upstreamsSummary())
+	}
 	fmt.Printf("  Compress   → %s\n", onOff(cfg.Compression.Enabled))
 	fmt.Printf("  Tool ✂️    → %s\n", cfg.toolCompactionSummary())
 	fmt.Printf("  Output     → %s\n", cfg.outputSummary())

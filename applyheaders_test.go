@@ -23,7 +23,7 @@ func TestApplyHeadersOAuthTokenStaysBearer(t *testing.T) {
 	})
 	req, _ := http.NewRequest(http.MethodPost, "https://api.anthropic.com/v1/messages", nil)
 
-	s.applyHeaders(req, orig, true)
+	s.applyHeaders(req, orig, true, Upstream{})
 
 	if got := req.Header.Get("Authorization"); got != "Bearer sk-ant-oat01-abc123" {
 		t.Errorf("OAuth token must stay a Bearer token, got Authorization=%q", got)
@@ -47,7 +47,7 @@ func TestApplyHeadersAPIKeyUsesXAPIKey(t *testing.T) {
 	orig := newReqWith(map[string]string{"x-api-key": "sk-ant-api03-xyz"})
 	req, _ := http.NewRequest(http.MethodPost, "https://api.anthropic.com/v1/messages", nil)
 
-	s.applyHeaders(req, orig, true)
+	s.applyHeaders(req, orig, true, Upstream{})
 
 	if got := req.Header.Get("x-api-key"); got != "sk-ant-api03-xyz" {
 		t.Errorf("API key must travel as x-api-key, got %q", got)

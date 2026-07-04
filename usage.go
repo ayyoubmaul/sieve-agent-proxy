@@ -59,7 +59,7 @@ func usageFromResponse(body []byte, isAnthropic bool) tokenUsage {
 
 // openAIUsage models the OpenAI-shaped usage block, including the two ways a
 // gateway may report prompt-cache reads (nested prompt_tokens_details, or a
-// top-level cache_read_tokens — the dana gateway emits both).
+// top-level cache_read_tokens — some gateways emit both).
 type openAIUsage struct {
 	PromptTokens        int `json:"prompt_tokens"`
 	CompletionTokens    int `json:"completion_tokens"`
